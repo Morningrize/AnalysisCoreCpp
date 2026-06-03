@@ -9,12 +9,17 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container: morningrize/debian13-root:1.0
+    container: morningrize/cern_root:debian13
     steps:
       - uses: actions/checkout@v4
 
       - name: Install git
         run: apt-get update && apt-get install -y git
+
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y git clang-tidy clang-format libgtest-dev
 
       - name: Build
         run: |
