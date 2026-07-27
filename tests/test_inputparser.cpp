@@ -114,16 +114,14 @@ TEST_F(InputParserTest, ReturnsEmptyIfNoFilesProvided) {
   EXPECT_TRUE(parser.get_input_files().empty());
 }
 
-TEST_F(InputParserTest, ReturnsFilesFromListFlag) {
-  const std::filesystem::path tmp_file =
-      std::filesystem::temp_directory_path() / "file_list.txt";
+TEST_F(InputParserDirectoryTest, ReturnsFilesFromListFlag) {
+  const std::filesystem::path tmp_file = tmp_dir / "file_list.txt";
   std::ofstream file_stream(tmp_file);
   file_stream << "file1.root\nfile2.root\n";
   file_stream.close();
   FakeArgs args{"program_name", "--list", tmp_file.string()};
   parser.parse(args.argc(), args.argv.data());
   EXPECT_EQ(parser.get_input_files().size(), 2U);
-  std::filesystem::remove(tmp_file);
 }
 
 TEST_F(InputParserTest, ExtensionWithoutDirectoryIsIgnored) {
