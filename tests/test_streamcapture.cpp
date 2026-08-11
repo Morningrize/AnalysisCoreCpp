@@ -17,9 +17,8 @@ protected:
 };
 
 TEST_F(StreamRedirectTest, RedirectsOutput) {
-  const std::ostringstream streamed_string;
-  const AnalysisCore::StreamRedirect redirect(std::clog,
-                                              streamed_string.rdbuf());
+  std::ostringstream streamed_string;
+  const AnalysisCore::StreamRedirect redirect(std::clog, streamed_string);
   std::clog << "redirected";
   EXPECT_EQ(streamed_string.str(), "redirected");
 }
@@ -28,9 +27,8 @@ TEST_F(StreamRedirectTest, RestoresPreviousBuffer) {
   const std::ostringstream outer_stream;
   std::clog.rdbuf(outer_stream.rdbuf());
   {
-    const std::ostringstream inner_stream;
-    const AnalysisCore::StreamRedirect redirect(std::clog,
-                                                inner_stream.rdbuf());
+    std::ostringstream inner_stream;
+    const AnalysisCore::StreamRedirect redirect(std::clog, inner_stream);
     std::clog << "captured";
     EXPECT_EQ(inner_stream.str(), "captured");
   }
