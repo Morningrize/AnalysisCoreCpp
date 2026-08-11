@@ -8,30 +8,9 @@
 
 #include <gtest/gtest.h>
 
+#include "StreamCapture.h"
 #include "ValueError.h"
 #include "WarningLevel.h"
-
-namespace {
-
-class ValueErrorWarningTest : public ::testing::Test {
-protected:
-  void SetUp() override {
-    AnalysisCore::set_warning_level(AnalysisCore::WarningLevel::WARN);
-    old_clog_buf_ = std::clog.rdbuf(test_stream_.rdbuf());
-  }
-
-  void TearDown() override {
-    std::clog.rdbuf(old_clog_buf_);
-    AnalysisCore::set_warning_level(AnalysisCore::WarningLevel::WARN);
-    test_stream_.str("");
-    test_stream_.clear();
-  }
-
-  std::ostringstream test_stream_;         // NOLINT
-  std::streambuf *old_clog_buf_ = nullptr; // NOLINT
-};
-
-} // namespace
 
 TEST(ValueErrorTest, SymmetricConstructorStoresValues) {
   const AnalysisCore::ValueError value_error(12.3, 0.4);
@@ -113,13 +92,16 @@ TEST(ValueErrorTest, IsConsistentWithRejectsInvalidSigmas) {
                std::invalid_argument);
 }
 
-TEST_F(ValueErrorWarningTest, ConstructorWarnsOnSubnormalInput) {
+TEST(ValueErrorTest, ConstructorWarnsOnSubnormalInput) {
+  auto old_warning_level = AnalysisCore::get_warning_level();
+  AnalysisCore::set_warning_level(AnalysisCore::WarningLevel::WARN);
   const double subnormal = std::numeric_limits<double>::denorm_min();
-
+  const AnalysisCore::StreamCapture test_stream(std::clog);
   EXPECT_NO_THROW(AnalysisCore::ValueError(subnormal, 0.1));
   EXPECT_NE(
-      test_stream_.str().find("ValueError: constructed using subnormal input"),
+      test_stream.str().find("ValueError: constructed using subnormal input"),
       std::string::npos);
+  AnalysisCore::set_warning_level(old_warning_level);
 }
 
 TEST(ValueErrorTest, StreamOutputUsesExpectedFormat) {
