@@ -3,12 +3,12 @@
 #include <iostream>
 #include <limits>
 #include <optional>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 
 #include <gtest/gtest.h>
 
+#include "StreamCapture.h"
 #include "WarningLevel.h"
 #include "stat_utils.h"
 
@@ -16,23 +16,6 @@ const double SUBNORMAL_MIN = std::numeric_limits<double>::denorm_min();
 const double SUBNORMAL_MAX =
     std::nextafter(std::numeric_limits<double>::min(), 0.);
 const double SUBNORMAL = sqrt(SUBNORMAL_MAX) * sqrt(SUBNORMAL_MIN);
-
-class StatUtilsWarningTest : public ::testing::Test {
-protected:
-  void SetUp() override {
-    AnalysisCore::set_warning_level(AnalysisCore::WarningLevel::WARN);
-    old_clog_buf = std::clog.rdbuf(test_stream.rdbuf());
-  }
-
-  void TearDown() override {
-    std::clog.rdbuf(old_clog_buf);
-    AnalysisCore::set_warning_level(AnalysisCore::WarningLevel::WARN);
-    test_stream.str("");
-    test_stream.clear();
-  }
-  std::ostringstream test_stream;         // NOLINT
-  std::streambuf *old_clog_buf = nullptr; // NOLINT
-};
 
 TEST(OrderOfMagnitudeTest, UndefinedForZero) {
   EXPECT_EQ(AnalysisCore::order_of_magnitude(0.0), std::nullopt);
@@ -116,11 +99,15 @@ TEST(RoundDecimalsTest, HandlesZero) {
                    0.0);
 }
 
-TEST_F(StatUtilsWarningTest, RoundDecimalsHandleWarningSubnormal) {
+TEST(RoundDecimalsTest, HandlesWarningSubnormal) {
+  auto old_warning_level = AnalysisCore::get_warning_level();
+  AnalysisCore::set_warning_level(AnalysisCore::WarningLevel::WARN);
+  const AnalysisCore::StreamCapture test_stream(std::clog);
   EXPECT_NO_THROW(AnalysisCore::round_decimals(
       SUBNORMAL_MAX, 1 - AnalysisCore::MIN_EXPONENT10));
   EXPECT_NE(test_stream.str().find("round_decimals: subnormal input"),
             std::string::npos);
+  AnalysisCore::set_warning_level(old_warning_level);
 }
 
 TEST(RoundDecimalsTest, RoundToIntegers) {
