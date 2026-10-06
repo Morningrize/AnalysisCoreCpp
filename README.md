@@ -1,6 +1,6 @@
 # AnalysisCoreCpp
 
-A lightweight C++ library providing core utility functions for data analysis, with no external dependencies (no ROOT required).
+A lightweight C++ library providing core utility functions for data analysis (no ROOT required). The cxxopts dependency for command-line argument parsing is found or fetched automatically.
 
 ## Features
 
@@ -16,10 +16,14 @@ A lightweight C++ library providing core utility functions for data analysis, wi
 If you already built this project, downstream projects can use the existing build artifacts via CMake package config (no `add_subdirectory()` required).
 
 1. **Build AnalysisCoreCpp once**
-    ```bash
-    cmake -S . -B build
-    cmake --build build
     ```
+    mkdir build 
+    cd build/
+    cmake ..
+    make
+    ```
+
+    To use a local cxxopts package, pass its config directory with `-Dcxxopts_DIR=/path/to/cxxopts/lib/cmake/cxxopts`.
 
 2. **Set an environment variable to the generated package config directory**
     ```bash
@@ -57,31 +61,15 @@ target_link_libraries(your_target PRIVATE AnalysisCoreCpp)
 
 The `AnalysisCoreCpp` library will automatically add the correct include path for you, so you do **not** need to copy headers or manually set include directories.
 
-### cxxopts Dependency Resolution
-
-`AnalysisCoreCpp` resolves `cxxopts` in this order:
-
-1. If `CXXOPTS_LOCAL_PATH` is set, CMake treats it as a **package location hint** and requires finding a `cxxopts` CMake package there.
-2. Otherwise, it tries normal `find_package(cxxopts CONFIG)` discovery.
-3. If still not found, it falls back to `FetchContent`.
-
-When `CXXOPTS_LOCAL_PATH` is provided but invalid, configuration fails with an explicit error.
-
-Example:
-
-```bash
-export CXXOPTS_LOCAL_PATH="/path/to/cxxopts/install/or/build/root"
-cmake -S . -B build
-```
-
 ## Testing
 
+GTest is only required when configuring with BUILD_TESTS=ON.
 Tests are in the `tests/` directory. To build and run them:
 
 ```bash
 mkdir build
 cd build
-cmake ..
+cmake -DBUILD_TESTS=ON .. 
 make tests
 ctest
 ```

@@ -2,8 +2,8 @@
 
 include(CMakeFindDependencyMacro)
 
-if(@ANALYSISCORECPP_NEEDS_FIND_DEP_CXXOPTS@)
-  find_dependency(cxxopts CONFIG REQUIRED)
+if(NOT @FETCHED_CXXOPTS@)
+ find_dependency(cxxopts 3.2.0 EXACT CONFIG)
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/AnalysisCoreCppTargets.cmake")

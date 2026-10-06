@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DENABLE_CLANG_TIDY=ON
+          cmake .. -DENABLE_CLANG_TIDY=ON -DBUILD_TESTS=ON
           cmake --build . --target tests 
 
       - name: Run tests
