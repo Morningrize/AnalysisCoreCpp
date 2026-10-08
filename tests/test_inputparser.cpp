@@ -77,6 +77,13 @@ TEST_F(InputParserTest, ResultAccessibleAfterParse) {
   EXPECT_NO_THROW(static_cast<void>(parser.result()));
 }
 
+TEST_F(InputParserTest, CustomOptionsAdded) {
+  FakeArgs args{"program_name", "--verbose"};
+  parser.options().add_options()("verbose,v", "Enable verbose output");
+  parser.parse(args.argc(), args.argv.data());
+  EXPECT_EQ(parser.result().count("verbose"), 1);
+}
+
 TEST_F(InputParserTest, HelpRequestedReturnsFalseWithoutHelpFlag) {
   FakeArgs args{"program_name"};
   parser.parse(args.argc(), args.argv.data());

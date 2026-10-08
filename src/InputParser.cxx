@@ -15,7 +15,14 @@ namespace AnalysisCore{
 
     InputParser::InputParser(std::string description) 
         : description_(std::move(description)),
-          options_(std::make_unique<cxxopts::Options>("", description_)) {}
+          options_(std::make_unique<cxxopts::Options>("", description_)) {
+            options_->add_options()
+                ("f,files", "Input files separated by spaces", cxxopts::value<std::vector<std::string>>())
+                ("l,list", "List of file names stored in a text file", cxxopts::value<std::string>())
+                ("d,directory", "Directory holding input files", cxxopts::value<std::string>())
+                ("e,extension","Filter files in directory by extension, used in conjuction with the --d option",cxxopts::value<std::string>())
+                ("h,help",      "Print usage");
+          }
     
     InputParser::~InputParser() = default;
 
@@ -30,14 +37,6 @@ namespace AnalysisCore{
         if (result_) {
             throw std::runtime_error("parse() has already been called");
         }
-        options_ = std::make_unique<cxxopts::Options>(*argv, description_);
-        options_->add_options()
-            ("f,files", "Input files separated by spaces", cxxopts::value<std::vector<std::string>>())
-            ("l,list", "List of file names stored in a text file", cxxopts::value<std::string>())
-            ("d,directory", "Directory holding input files", cxxopts::value<std::string>())
-            ("e,extension","Filter files in directory by extension, used in conjuction with the --d option",cxxopts::value<std::string>())
-            ("h,help",      "Print usage");
-
         result_ = std::make_unique<cxxopts::ParseResult>(options_->parse(argc, argv));
     }
 
