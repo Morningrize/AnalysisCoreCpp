@@ -43,6 +43,22 @@ file(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cxx
 )
 
+file(GLOB SUBDIRS LIST_DIRECTORIES true CONFIGURE_DEPENDS
+     ${CMAKE_CURRENT_SOURCE_DIR}/include/*)
+
+set(HEADER_LIB_TARGETS)
+foreach(dir ${SUBDIRS})
+    if(IS_DIRECTORY ${dir})
+        get_filename_component(sub ${dir} NAME)
+        set(tgt AnalysisCoreCpp_${sub})
+        add_library(${tgt} INTERFACE)
+        add_library(AnalysisCoreCpp::${sub} ALIAS ${tgt})
+        set_target_properties(${tgt} PROPERTIES EXPORT_NAME ${sub})
+        target_include_directories(${tgt} INTERFACE ${dir})
+        list(APPEND HEADER_LIB_TARGETS ${tgt})
+    endif()
+endforeach()
+
 add_library(AnalysisCoreCpp SHARED ${SOURCES})
 add_library(AnalysisCoreCpp::AnalysisCoreCpp ALIAS AnalysisCoreCpp)
 target_include_directories(AnalysisCoreCpp
@@ -50,7 +66,9 @@ target_include_directories(AnalysisCoreCpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(AnalysisCoreCpp
-    PUBLIC cxxopts::cxxopts
+    PUBLIC 
+        cxxopts::cxxopts
+        ${HEADER_LIB_TARGETS}
 )
 
 # Export a build-tree package config for find_package(AnalysisCoreCpp CONFIG)
@@ -59,7 +77,7 @@ set(ANALYSISCORECPP_CONFIG_FILE "${ANALYSISCORECPP_PACKAGE_DIR}/AnalysisCoreCppC
 set(ANALYSISCORECPP_TARGETS_FILE "${ANALYSISCORECPP_PACKAGE_DIR}/AnalysisCoreCppTargets.cmake")
 
 export(
-    TARGETS AnalysisCoreCpp ${FETCHED_CXXOPTS_TARGET}
+    TARGETS AnalysisCoreCpp ${HEADER_LIB_TARGETS} ${FETCHED_CXXOPTS_TARGET}
     FILE "${ANALYSISCORECPP_TARGETS_FILE}"
     NAMESPACE AnalysisCoreCpp::
 )
@@ -91,10 +109,6 @@ if(BUILD_TESTS)
         foreach(test_src ${TEST_SOURCES})
             get_filename_component(test_name ${test_src} NAME_WE)
             add_executable(${test_name} EXCLUDE_FROM_ALL ${test_src})
-            target_include_directories(
-                ${test_name}
-                PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-            )
             target_link_libraries(${test_name}
                 PRIVATE
                     AnalysisCoreCpp
