@@ -49,6 +49,22 @@ add_subdirectory($ENV{AnalysisCoreCpp_SRC_DIR})
 target_link_libraries(your_target PRIVATE AnalysisCoreCpp)
 ```
 
+### Header-Only Interface Targets
+
+Each immediate subdirectory of `include/` is exposed as a header-only CMake interface target. For example, `include/StreamUtils/` is available as `AnalysisCoreCpp::StreamUtils`. Link this target when you only need those headers; it adds the subdirectory to the include path without linking the compiled `AnalysisCoreCpp` library:
+
+```cmake
+target_link_libraries(your_target PRIVATE AnalysisCoreCpp::StreamUtils)
+```
+
+This target is available after either `find_package(AnalysisCoreCpp CONFIG REQUIRED)` or `add_subdirectory(...)`. Include its headers without the subdirectory prefix:
+
+```cpp
+#include "StreamCapture.h"
+```
+
+Linking `AnalysisCoreCpp::AnalysisCoreCpp` also makes the interface targets available transitively, along with the compiled library and its dependencies. 
+
 4. **Include the headers in your code:**
     ```cpp
     #include "io_utils.h"
