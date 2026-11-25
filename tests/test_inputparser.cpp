@@ -1,15 +1,12 @@
-
-#include <filesystem>
-#include <fstream>
 #include <initializer_list>
 #include <stdexcept>
 #include <string>
-#include <sys/stat.h>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "InputParser.h"
+#include "TemporaryDirectory.h"
 
 namespace {
 
@@ -29,15 +26,10 @@ protected:
   AnalysisCore::InputParser parser{"Fake program description"};
 };
 
-class InputParserDirectoryTest : public ::testing::Test {
+class InputParserConfigTest : public ::testing::Test {
 protected:
-  AnalysisCore::InputParser parser{"Fake program description"}; // NOLINT
-  void SetUp() override {
-    tmp_dir = std::filesystem::temp_directory_path() / "test_list_directory";
-    std::filesystem::create_directory(tmp_dir);
-  }
-  void TearDown() override { std::filesystem::remove_all(tmp_dir); }
-  std::filesystem::path tmp_dir; // NOLINT
+  AnalysisCore::InputParser parser{"Fake program description",
+                                   {.require_config = true}};
 };
 
 } // namespace
@@ -115,17 +107,17 @@ TEST_F(InputParserTest, DeduplicatesFiles) {
   EXPECT_EQ(parser.get_input_files().size(), 1U);
 }
 
-TEST_F(InputParserTest, ReturnsEmptyIfNoFilesProvided) {
+TEST_F(InputParserTest, ThrowsIfNoFilesProvided) {
   FakeArgs args{"program_name"};
   parser.parse(args.argc(), args.argv.data());
-  EXPECT_TRUE(parser.get_input_files().empty());
+  EXPECT_THROW(static_cast<void>(parser.get_input_files()),
+               std::invalid_argument);
 }
 
-TEST_F(InputParserDirectoryTest, ReturnsFilesFromListFlag) {
-  const std::filesystem::path tmp_file = tmp_dir / "file_list.txt";
-  std::ofstream file_stream(tmp_file);
-  file_stream << "file1.root\nfile2.root\n";
-  file_stream.close();
+TEST_F(InputParserTest, ReturnsFilesFromListFlag) {
+  const TemporaryDirectory tmp_dir;
+  const auto tmp_file =
+      tmp_dir.create_file("file_list.txt", "file1.root\nfile2.root\n");
   FakeArgs args{"program_name", "--list", tmp_file.string()};
   parser.parse(args.argc(), args.argv.data());
   EXPECT_EQ(parser.get_input_files().size(), 2U);
@@ -138,48 +130,84 @@ TEST_F(InputParserTest, ExtensionWithoutDirectoryIsIgnored) {
   EXPECT_EQ(parser.get_input_files().size(), 1U);
 }
 
-TEST_F(InputParserDirectoryTest, ReturnsFilesFromDirectoryFlag) {
-  std::ofstream(tmp_dir / "file1.root").close();
-  std::ofstream(tmp_dir / "file2.root").close();
-  FakeArgs args{"program_name", "--directory", tmp_dir.string()};
+TEST_F(InputParserTest, ReturnsFilesFromDirectoryFlag) {
+  const TemporaryDirectory tmp_dir;
+  tmp_dir.create_file("file1.root");
+  tmp_dir.create_file("file2.root");
+  FakeArgs args{"program_name", "--directory", tmp_dir.path().string()};
   parser.parse(args.argc(), args.argv.data());
   EXPECT_EQ(parser.get_input_files().size(), 2U);
 }
 
-TEST_F(InputParserDirectoryTest, ReturnsFilesFromDirectoryMatchingExtension) {
-  std::ofstream(tmp_dir / "file1.root").close();
-  std::ofstream(tmp_dir / "file2.txt").close();
-  FakeArgs args{"program_name", "--directory", tmp_dir.string(), "--extension",
-                ".root"};
+TEST_F(InputParserTest, ReturnsFilesFromDirectoryMatchingExtension) {
+  const TemporaryDirectory tmp_dir;
+  tmp_dir.create_file("file1.root");
+  tmp_dir.create_file("file2.txt");
+  FakeArgs args{"program_name", "--directory", tmp_dir.path().string(),
+                "--extension", ".root"};
   parser.parse(args.argc(), args.argv.data());
   EXPECT_EQ(parser.get_input_files().size(), 1U);
 }
 
-TEST_F(InputParserDirectoryTest, ReturnsFilesFromVariousSources) {
-  std::ofstream(tmp_dir / "file1.root").close();
-  std::ofstream(tmp_dir / "file2.root").close();
-  std::ofstream file_list(tmp_dir / "file_list.txt");
-  file_list << "file3.root\nfile4.root\n ";
-  file_list.close();
-  FakeArgs args{"program_name",
-                "--directory",
-                tmp_dir.string(),
-                "--extension",
-                ".root",
-                "--list",
-                (tmp_dir / "file_list.txt").string(),
-                "--files",
-                "file5.root"};
+TEST_F(InputParserTest, ReturnsFilesFromVariousSources) {
+  const TemporaryDirectory tmp_dir;
+  tmp_dir.create_file("file1.root");
+  tmp_dir.create_file("file2.root");
+  const auto file_list =
+      tmp_dir.create_file("file_list.txt", "file3.root\nfile4.root\n ");
+  FakeArgs args{"program_name",     "--directory", tmp_dir.path().string(),
+                "--extension",      ".root",       "--list",
+                file_list.string(), "--files",     "file5.root"};
   parser.parse(args.argc(), args.argv.data());
   EXPECT_EQ(parser.get_input_files().size(), 5U);
 }
 
-TEST_F(InputParserDirectoryTest, DeduplicatesFilesAcrossSources) {
-  std::ofstream file_list(tmp_dir / "file_list.txt");
-  file_list << "file1.root\n";
-  file_list.close();
-  FakeArgs args{"program_name", "--list", (tmp_dir / "file_list.txt").string(),
-                "--files", "file1.root"};
+TEST_F(InputParserTest, DeduplicatesFilesAcrossSources) {
+  const TemporaryDirectory tmp_dir;
+  const auto file_list = tmp_dir.create_file("file_list.txt", "file1.root\n");
+  FakeArgs args{"program_name", "--list", file_list.string(), "--files",
+                "file1.root"};
   parser.parse(args.argc(), args.argv.data());
   EXPECT_EQ(parser.get_input_files().size(), 1U);
+}
+
+TEST_F(InputParserTest, ConfigOptionalByDefault) {
+  FakeArgs args{"program_name"};
+  parser.parse(args.argc(), args.argv.data());
+  EXPECT_EQ(parser.result().count("config"), 0U);
+}
+
+TEST_F(InputParserConfigTest, ThrowsForRequiredConfigMissing) {
+  FakeArgs args{"program_name"};
+  EXPECT_THROW(parser.parse(args.argc(), args.argv.data()),
+               std::invalid_argument);
+}
+
+TEST_F(InputParserConfigTest, ThrowsForEmptyStringConfig) {
+  FakeArgs args{"program_name", "--config", ""};
+  EXPECT_NO_THROW(parser.parse(args.argc(), args.argv.data()));
+  EXPECT_THROW(static_cast<void>(parser.get_config_file()),
+               std::invalid_argument);
+}
+
+TEST_F(InputParserConfigTest, HelpRequestedMissingRequiredConfig) {
+  FakeArgs args{"program_name", "--help"};
+  ASSERT_NO_THROW(parser.parse(args.argc(), args.argv.data()));
+  EXPECT_TRUE(parser.help_requested());
+}
+
+TEST_F(InputParserConfigTest, ParsesRequiredConfigProvided) {
+  FakeArgs args{"program_name", "--config", "config.toml"};
+  ASSERT_NO_THROW(parser.parse(args.argc(), args.argv.data()));
+  EXPECT_EQ(parser.result()["config"].as<std::string>(), "config.toml");
+}
+
+TEST_F(InputParserConfigTest, ThrowsGetConfigFileBeforeParse) {
+  EXPECT_THROW(static_cast<void>(parser.get_config_file()), std::runtime_error);
+}
+
+TEST_F(InputParserConfigTest, GetConfigReturnsConfigFile) {
+  FakeArgs args{"program_name", "--config", "config.toml"};
+  parser.parse(args.argc(), args.argv.data());
+  EXPECT_EQ(parser.get_config_file(), "config.toml");
 }

@@ -1,6 +1,6 @@
 # AnalysisCoreCpp
 
-A lightweight C++ library providing core utility functions for data analysis (no ROOT required). The cxxopts dependency for command-line argument parsing is found or fetched automatically.
+A lightweight C++ library providing core utility functions for data analysis (no ROOT required). The cxxopts and toml++ dependencies are found or fetched automatically.
 
 ## Features
 
@@ -23,7 +23,7 @@ If you already built this project, downstream projects can use the existing buil
     make
     ```
 
-    To use a local cxxopts package, pass its config directory with `-Dcxxopts_DIR=/path/to/cxxopts/lib/cmake/cxxopts`.
+    To use local dependency packages, pass their config directories with `-Dcxxopts_DIR=/path/to/cxxopts/lib/cmake/cxxopts` and `-Dtomlplusplus_DIR=/path/to/tomlplusplus/lib/cmake/tomlplusplus`.
 
 2. **Set an environment variable to the generated package config directory**
     ```bash
@@ -65,16 +65,6 @@ This target is available after either `find_package(AnalysisCoreCpp CONFIG REQUI
 
 Linking `AnalysisCoreCpp::AnalysisCoreCpp` also makes the interface targets available transitively, along with the compiled library and its dependencies. 
 
-4. **Include the headers in your code:**
-    ```cpp
-    #include "io_utils.h"
-    #include "stat_utils.h"
-    #include "InputParser.h"
-
-    // Use the utilities
-    auto parser = InputParser(argc, argv);
-    ```
-
 The `AnalysisCoreCpp` library will automatically add the correct include path for you, so you do **not** need to copy headers or manually set include directories.
 
 ## Testing
@@ -89,6 +79,10 @@ cmake -DBUILD_TESTS=ON ..
 make tests
 ctest
 ```
+
+## Acknowledgements
+
+This project is developed with assistance from GitHub Copilot. All contributions are reviewed and maintained by the project author.
 
 ## License
 

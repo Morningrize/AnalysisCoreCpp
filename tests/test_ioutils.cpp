@@ -1,30 +1,16 @@
 #include <filesystem>
-#include <fstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include "TemporaryDirectory.h"
 #include "io_utils.h"
 
-class ParseLinesTest : public ::testing::Test {
+class IoUtilsTest : public ::testing::Test {
 protected:
-  void SetUp() override {
-    tmp_file = std::filesystem::temp_directory_path() / "test_parse_lines.txt";
-  }
-  void TearDown() override { std::filesystem::remove(tmp_file); }
-  std::filesystem::path tmp_file; // NOLINT
-};
-
-class ListDirectoryTest : public ::testing::Test {
-protected:
-  void SetUp() override {
-    tmp_dir = std::filesystem::temp_directory_path() / "test_list_directory";
-    std::filesystem::create_directory(tmp_dir);
-  }
-  void TearDown() override { std::filesystem::remove_all(tmp_dir); }
-  std::filesystem::path tmp_dir; // NOLINT
+  TemporaryDirectory tmp_dir;
 };
 
 // ----------------------
@@ -50,42 +36,37 @@ TEST(TrimStringTest, TrimEmptyString) {
 // parse_lines
 // ----------------------
 
-TEST_F(ParseLinesTest, ThrowsForMissingFile) {
-  EXPECT_THROW(AnalysisCore::parse_lines("/nonexistent/path/file.txt"),
-               std::runtime_error);
+TEST_F(IoUtilsTest, ThrowsForMissingFile) {
+  EXPECT_THROW(
+      AnalysisCore::parse_lines((tmp_dir.path() / "missing.txt").string()),
+      std::runtime_error);
 }
 
-TEST_F(ParseLinesTest, ReturnsEmptyForEmptyFile) {
-  std::ofstream file_stream(tmp_file);
-  file_stream.close();
+TEST_F(IoUtilsTest, ReturnsEmptyForEmptyFile) {
+  const auto tmp_file = tmp_dir.create_file("test_parse_lines.txt");
   EXPECT_TRUE(AnalysisCore::parse_lines(tmp_file.string()).empty());
 }
 
-TEST_F(ParseLinesTest, ReturnsLinesFromFile) {
-  std::ofstream file_stream(tmp_file);
-  file_stream << "line1\nline2\nline3\n";
-  file_stream.close();
-
+TEST_F(IoUtilsTest, ReturnsLinesFromFile) {
+  const auto tmp_file =
+      tmp_dir.create_file("test_parse_lines.txt", "line1\nline2\nline3\n");
   const auto lines = AnalysisCore::parse_lines(tmp_file.string());
   EXPECT_EQ(lines.size(), 3U);
   EXPECT_EQ(lines[0], "line1");
   EXPECT_EQ(lines[2], "line3");
 }
 
-TEST_F(ParseLinesTest, SkipsEmptyLines) {
-  std::ofstream file_stream(tmp_file);
-  file_stream << "line1\n\nline2\n";
-  file_stream.close();
-
+TEST_F(IoUtilsTest, SkipsEmptyLines) {
+  const auto tmp_file =
+      tmp_dir.create_file("test_parse_lines.txt", "line1\n\nline2\n");
   const auto lines = AnalysisCore::parse_lines(tmp_file.string());
   EXPECT_EQ(lines.size(), 2U);
   EXPECT_EQ(lines[1], "line2");
 }
 
-TEST_F(ParseLinesTest, TrimsLeadingTrailingWhitespace) {
-  std::ofstream file_stream(tmp_file);
-  file_stream << "\tline1\n\nline2 \n \n";
-  file_stream.close();
+TEST_F(IoUtilsTest, TrimsLeadingTrailingWhitespace) {
+  const auto tmp_file =
+      tmp_dir.create_file("test_parse_lines.txt", "\tline1\n\nline2 \n \n");
   const auto lines = AnalysisCore::parse_lines(tmp_file.string());
   EXPECT_EQ(lines.size(), 2U);
   EXPECT_EQ(lines[0], "line1");
@@ -96,29 +77,35 @@ TEST_F(ParseLinesTest, TrimsLeadingTrailingWhitespace) {
 // list_directory
 // ----------------------
 
-TEST_F(ListDirectoryTest, ThrowsForMissingDirectory) {
-  EXPECT_THROW(AnalysisCore::list_directory("/nonexistent/path"),
-               std::runtime_error);
+TEST_F(IoUtilsTest, ThrowsForMissingDirectory) {
+  EXPECT_THROW(
+      AnalysisCore::list_directory((tmp_dir.path() / "missing").string()),
+      std::runtime_error);
 }
 
-TEST_F(ListDirectoryTest, ReturnsEmptyForEmptyDirectory) {
-  EXPECT_TRUE(AnalysisCore::list_directory(tmp_dir.string()).empty());
+TEST_F(IoUtilsTest, ReturnsEmptyForEmptyDirectory) {
+  EXPECT_TRUE(AnalysisCore::list_directory(tmp_dir.path().string()).empty());
 }
 
-TEST_F(ListDirectoryTest, ReturnsEmptyWhenNoMatchingExtension) {
-  std::ofstream(tmp_dir / "file1.txt").close();
-  EXPECT_TRUE(AnalysisCore::list_directory(tmp_dir.string(), "root").empty());
+TEST_F(IoUtilsTest, ReturnsEmptyWhenNoMatchingExtension) {
+  tmp_dir.create_file("file1.txt");
+  EXPECT_TRUE(
+      AnalysisCore::list_directory(tmp_dir.path().string(), ".root").empty());
 }
 
-TEST_F(ListDirectoryTest, ListsAllExtensionUnspecified) {
-  std::ofstream(tmp_dir / "file1.txt").close();
-  std::ofstream(tmp_dir / "file2.root").close();
+TEST_F(IoUtilsTest, ListsAllExtensionUnspecified) {
+  tmp_dir.create_file("file1.txt");
+  tmp_dir.create_file("file2.root");
 
-  const auto files = AnalysisCore::list_directory(tmp_dir.string());
+  const auto files = AnalysisCore::list_directory(tmp_dir.path().string());
   EXPECT_EQ(files.size(), 2U);
 }
 
-TEST_F(ListDirectoryTest, FiltersFilesByExtension) {
-  std::ofstream(tmp_dir / "file1.txt").close();
-  std::ofstream(tmp_dir / "file2.root").close();
+TEST_F(IoUtilsTest, FiltersFilesByExtension) {
+  tmp_dir.create_file("file1.txt");
+  const auto root_file = tmp_dir.create_file("file2.root");
+
+  const auto files =
+      AnalysisCore::list_directory(tmp_dir.path().string(), ".root");
+  EXPECT_EQ(files, std::vector<std::string>{root_file.string()});
 }
