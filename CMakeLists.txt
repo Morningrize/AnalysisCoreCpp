@@ -13,9 +13,6 @@ option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
 set(FETCHED_CXXOPTS OFF)
 set(FETCHED_CXXOPTS_TARGET)
 
-set(FETCHED_TOMLPP OFF)
-set(FETCHED_TOMLPP_TARGET)
-
 # ----------------------
 # Dependencies
 # ----------------------
@@ -34,22 +31,6 @@ if(NOT cxxopts_FOUND OR NOT TARGET cxxopts::cxxopts)
     FetchContent_MakeAvailable(cxxopts)
     SET(FETCHED_CXXOPTS_TARGET cxxopts)
     set(FETCHED_CXXOPTS ON)
-endif()
-
-#toml++
-find_package(tomlplusplus CONFIG QUIET)
-
-if (NOT tomlplusplus_FOUND OR NOT TARGET tomlplusplus::tomlplusplus)
-    message("Fetching toml++")
-    include(FetchContent)
-    FetchContent_Declare(
-        tomlplusplus
-        GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
-        GIT_TAG        v3.4.0
-    )
-    FetchContent_MakeAvailable(tomlplusplus)
-    SET(FETCHED_TOMLPP_TARGET tomlplusplus_tomlplusplus)
-    set(FETCHED_TOMLPP ON)
 endif()
 
 # ----------------------
@@ -87,7 +68,6 @@ target_include_directories(AnalysisCoreCpp
 target_link_libraries(AnalysisCoreCpp
     PUBLIC 
         cxxopts::cxxopts
-        tomlplusplus::tomlplusplus
         ${HEADER_LIB_TARGETS}
 )
 
@@ -97,7 +77,7 @@ set(ANALYSISCORECPP_CONFIG_FILE "${ANALYSISCORECPP_PACKAGE_DIR}/AnalysisCoreCppC
 set(ANALYSISCORECPP_TARGETS_FILE "${ANALYSISCORECPP_PACKAGE_DIR}/AnalysisCoreCppTargets.cmake")
 
 export(
-    TARGETS AnalysisCoreCpp ${HEADER_LIB_TARGETS} ${FETCHED_CXXOPTS_TARGET} ${FETCHED_TOMLPP_TARGET}
+    TARGETS AnalysisCoreCpp ${HEADER_LIB_TARGETS} ${FETCHED_CXXOPTS_TARGET}
     FILE "${ANALYSISCORECPP_TARGETS_FILE}"
     NAMESPACE AnalysisCoreCpp::
 )

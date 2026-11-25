@@ -1,6 +1,6 @@
 # AnalysisCoreCpp
 
-A lightweight C++ library providing core utility functions for data analysis (no ROOT required). The cxxopts and toml++ dependencies are found or fetched automatically.
+A lightweight C++ library providing core utility functions for data analysis (no ROOT required). The cxxopts dependency for command-line argument parsing is found or fetched automatically.
 
 ## Features
 
@@ -23,7 +23,7 @@ If you already built this project, downstream projects can use the existing buil
     make
     ```
 
-    To use local dependency packages, pass their config directories with `-Dcxxopts_DIR=/path/to/cxxopts/lib/cmake/cxxopts` and `-Dtomlplusplus_DIR=/path/to/tomlplusplus/lib/cmake/tomlplusplus`.
+    To use a local cxxopts package, pass its config directory with `-Dcxxopts_DIR=/path/to/cxxopts/lib/cmake/cxxopts`.
 
 2. **Set an environment variable to the generated package config directory**
     ```bash
