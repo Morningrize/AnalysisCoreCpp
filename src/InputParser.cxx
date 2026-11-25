@@ -13,15 +13,17 @@
 
 namespace AnalysisCore{
 
-    InputParser::InputParser(std::string description) 
+    InputParser::InputParser(std::string description, InputParserRequiredFlags flags) 
         : description_(std::move(description)),
+          flags_(flags),
           options_(std::make_unique<cxxopts::Options>("", description_)) {
             options_->add_options()
-                ("f,files", "Input files separated by spaces", cxxopts::value<std::vector<std::string>>())
+                ("f,files", "Input files, comma separated", cxxopts::value<std::vector<std::string>>())
                 ("l,list", "List of file names stored in a text file", cxxopts::value<std::string>())
                 ("d,directory", "Directory holding input files", cxxopts::value<std::string>())
                 ("e,extension","Filter files in directory by extension, used in conjuction with the --d option",cxxopts::value<std::string>())
-                ("h,help",      "Print usage");
+                ("c,config","Provide a TOML config file", cxxopts::value<std::string>())
+                ("h,help", "Print usage");
           }
     
     InputParser::~InputParser() = default;
@@ -38,6 +40,11 @@ namespace AnalysisCore{
             throw std::runtime_error("parse() has already been called");
         }
         result_ = std::make_unique<cxxopts::ParseResult>(options_->parse(argc, argv));
+        if (flags_.require_config && 
+            result_->count("help") == 0 &&
+            result_->count("config") == 0){
+                throw std::invalid_argument("--config is required");
+            }         
     }
 
     bool InputParser::help_requested() const {
@@ -54,10 +61,24 @@ namespace AnalysisCore{
         return options_->help();
     }
 
-    std::vector<std::string> InputParser::get_input_files() const {
+    std::string InputParser::get_config_file() const {
         if (!result_) {
             throw std::runtime_error("parse() must be called first");
         }
+        std::string config_file;
+        if (result_->count("config") != 0U) {
+            config_file = (*result_)["config"].as<std::string>();
+            if (config_file.empty()) {
+                throw std::invalid_argument("No config file provided");
+            }
+        }
+        return config_file;
+    }
+
+    std::vector<std::string> InputParser::get_input_files() const {
+      if (!result_) {
+        throw std::runtime_error("parse() must be called first");
+      }
       std::vector<std::string> file_names;
       if (result_->count("files") != 0U) {
         const auto& files = (*result_)["files"].as<std::vector<std::string>>();
@@ -86,8 +107,11 @@ namespace AnalysisCore{
             unique_file_names.push_back(file_name);
         }
       }
+      if (unique_file_names.empty()) {
+        throw std::invalid_argument("No input files provided");
+      }
 
-    return unique_file_names;
+      return unique_file_names;
     }
 
     const cxxopts::ParseResult& InputParser::result() const {
